@@ -1,6 +1,5 @@
 import json
 import numpy as np 
-from functools import reduce
 import itertools
 
 with open("cf2.json") as f:
