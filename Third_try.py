@@ -11,38 +11,37 @@ from optparse import OptionParser
 #results_folder = "C:/langevin_simulator-binding/x64/Release/results/"
 
 
-def get_path_file(key):
-    for k, v in options.__dict__.items():
-        if k == key:
-            return v
+def get_path_file(key, options):
+    if not hasattr(options, key):
+        raise ValueError(f"There is no {key} option")
+    return getattr(options, key)
 
 
-def main():
+def main(options):
 
-    with open(os.path.join(get_path_file('input_folder'), get_path_file('task_file_name'))) as f:
+    with open(os.path.join(get_path_file('input_folder', options), get_path_file('task_file_name', options))) as f:
         templates = json.load(f)
 
     numb_dict = 0
-
     for cross_scan_dict in templates["Task"]["CrossScan"]:
-
         if cross_scan_dict != {}:
-
             numb_dict += 1
 
             type_params = [item.split("->") for item in cross_scan_dict]
             type_params_grouped = {key: [par[1] for par in group]
                                    for key, group in itertools.groupby(type_params, lambda x: x[0])}
+            
+            combination_dict = dict()
+            for type_param, params_list in type_params_grouped.items():
+                # creation list values of parameters
+                params_values_list = (cross_scan_dict[type_param + '->' + par] for par in params_list)
 
-            # creation list values of parameters
-            cross_scan = [[cross_scan_dict[type_param + '->' + par] for par in type_params_grouped[type_param]]
-                          for type_param in type_params_grouped]
-            # creation complex dict - {'type_parameter_i': [{'name_param_j': 'value'}]},
-            # [] includes all combination for type_parameter_i
-            combination_dict = {type_par: [dict(zip(par, comb)) for comb in itertools.product(*list_values)]
-                                for (type_par, par), list_values in zip(type_params_grouped.items(), cross_scan)}
+                # creation complex dict - {'type_parameter_i': [{'name_param_j': 'value'}]},
+                # [] includes all combination for type_parameter_i
+                combination_dict[type_param] = [dict(zip(params_list, comb)) for comb in itertools.product(*params_values_list)]
 
-            with open(os.path.join(get_path_file('input_folder'), get_path_file('parent_config_filename'))) as f:
+            with open(os.path.join(get_path_file('input_folder', options),
+                                   get_path_file('parent_config_filename', options))) as f:
                 configuration = json.load(f)
 
             save_configs = [configuration]
@@ -52,15 +51,16 @@ def main():
                 s = copy.deepcopy(config)
                 return s
 
-            #creation of configuration files based on the parent config
-            for type_param in combination_dict.keys():
-                new_configs = [save(config, type_param, comb) for comb in combination_dict[type_param]
+            # creation of configuration files based on the parent config
+            for type_param, patch_list in combination_dict.items():
+                new_configs = [save(config, type_param, comb) for comb in patch_list
                                for config in save_configs]
                 save_configs = copy.deepcopy(new_configs)
 
-            for config, numb_comb in zip(new_configs, range(len(new_configs))):
-                with open(os.path.join(get_path_file('results_folder'), f'conf_{numb_dict}_{numb_comb + 1}.json'), 'w')\
+            for numb_comb, config in enumerate(new_configs):
+                with open(os.path.join(get_path_file('results_folder', options), f'conf_{numb_dict}_{numb_comb + 1}.json'), 'w')\
                         as f: json.dump(config, f, sort_keys=True, indent=2)
+
 
 if __name__ == '__main__':
 
@@ -73,5 +73,5 @@ if __name__ == '__main__':
 
     (options, args) = parser.parse_args()
 
-    main()
+    main(options)
 
