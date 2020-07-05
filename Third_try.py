@@ -1,8 +1,9 @@
 import json
 import os
-from optparse import OptionParser
 import itertools
 import copy
+
+from optparse import OptionParser
 
 #input_folder = 'C:/langevin_simulator-binding/x64/Release/'
 #task_file_name = "cf2.json"
