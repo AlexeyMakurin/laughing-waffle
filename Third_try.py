@@ -2,6 +2,8 @@ import json
 import os
 import itertools
 import copy
+import subprocess
+import shlex
 
 from optparse import OptionParser
 
@@ -10,15 +12,29 @@ from optparse import OptionParser
 #parent_config_filename = 'cf1.json'
 #results_folder = "C:/langevin_simulator-binding/x64/Release/results/"
 
-
 def get_path_file(key, options):
     if not hasattr(options, key):
         raise ValueError(f"There is no {key} option")
     return getattr(options, key)
 
+def run_simulator(configs, options):
+
+    nthreads = int(get_path_file("nthreads", options))
+    exe_file = os.path.join(get_path_file("input_folder", options), 'langevin_simulator-binding.exe')
+    taskfiles = ' '.join([os.path.join(get_path_file("results_folder", options), item) for item in configs])
+    paramsfile = os.path.join(get_path_file("input_folder", options), get_path_file("task_file_name", options))
+
+    arg = ' '.join([exe_file, f'-paramsfile {paramsfile}', f'-taskfile {taskfiles}', f'-nthreads {nthreads - 1}'])
+    simulator = subprocess.call(arg)
+
+    if simulator == 0:
+        print('Success!')
+    else:
+        print('Error!')
+
 
 def main(options):
-
+    list_configs = []
     with open(os.path.join(get_path_file('input_folder', options), get_path_file('task_file_name', options))) as f:
         templates = json.load(f)
 
@@ -60,7 +76,8 @@ def main(options):
             for numb_comb, config in enumerate(new_configs):
                 with open(os.path.join(get_path_file('results_folder', options), f'conf_{numb_dict}_{numb_comb + 1}.json'), 'w')\
                         as f: json.dump(config, f, sort_keys=True, indent=2)
-
+                list_configs.append(f'conf_{numb_dict}_{numb_comb + 1}.json')
+    return list_configs
 
 if __name__ == '__main__':
 
@@ -70,8 +87,9 @@ if __name__ == '__main__':
     parser.add_option('-t', '--task_file_name')
     parser.add_option('-p', '--parent_config_filename')
     parser.add_option('-r', '--results_folder')
+    parser.add_option('-n', '--nthreads')
 
     (options, args) = parser.parse_args()
 
-    main(options)
-
+    configs = main(options)
+    run_simulator(configs, options)
