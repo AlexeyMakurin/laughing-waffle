@@ -3,7 +3,6 @@ import os
 import itertools
 import copy
 import subprocess
-import shlex
 
 from optparse import OptionParser
 
