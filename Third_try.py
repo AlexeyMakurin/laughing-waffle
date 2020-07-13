@@ -20,10 +20,10 @@ def run_simulator(configs, options):
 
     nthreads = int(get_path_file("nthreads", options))
     exe_file = os.path.join(get_path_file("input_folder", options), 'langevin_simulator-binding.exe')
-    taskfiles = ' '.join([os.path.join(get_path_file("results_folder", options), item) for item in configs])
-    paramsfile = os.path.join(get_path_file("input_folder", options), get_path_file("task_file_name", options))
+    paramsfile = ' '.join([os.path.join(get_path_file("results_folder", options), item) for item in configs])
+    taskfile = os.path.join(get_path_file("input_folder", options), get_path_file("task_file_name", options))
 
-    arg = ' '.join([exe_file, f'-paramsfile {paramsfile}', f'-taskfile {taskfiles}', f'-nthreads {nthreads - 1}'])
+    arg = ' '.join([exe_file, f'-paramsfile {paramsfile}', f'-taskfile {taskfile}', f'-nthreads {nthreads - 1}'])
     simulator = subprocess.call(arg)
 
     if simulator == 0:
