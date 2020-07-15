@@ -12,27 +12,50 @@ from optparse import OptionParser
 #results_folder = "C:/langevin_simulator-binding/x64/Release/results/"
 
 def get_path_file(key, options):
+    """Getting paths and the name of the configuration files, and the number of cores.
+
+     Keyword arguments:
+         key -- class 'str', argument name corresponding to path or file name / number of cores
+         options -- class 'optparse.Values', contains the value of the argument
+
+    """
+
     if not hasattr(options, key):
         raise ValueError(f"There is no {key} option")
     return getattr(options, key)
 
+
 def run_simulator(configs, options):
+    """ Launches simulator langevin_simulator-binding with passing arguments -paramsfile, -taskfile, -nthreads.
+
+    Keyword arguments:
+        configs -- class 'list', contains the names of the created configuration files
+        options -- class 'optparse.Values', contains the value of the argument (-paramsfile, -taskfile, -nthreads).
+
+    """
 
     nthreads = int(get_path_file("nthreads", options))
     exe_file = os.path.join(get_path_file("input_folder", options), 'langevin_simulator-binding.exe')
-    paramsfile = ' '.join([os.path.join(get_path_file("results_folder", options), item) for item in configs])
+    paramsfile = ';'.join([os.path.join(get_path_file("results_folder", options), item) for item in configs])
     taskfile = os.path.join(get_path_file("input_folder", options), get_path_file("task_file_name", options))
 
-    arg = ' '.join([exe_file, f'-paramsfile {paramsfile}', f'-taskfile {taskfile}', f'-nthreads {nthreads - 1}'])
+    arg = f'{exe_file} -paramsfile {paramsfile} -taskfile {taskfile} -nthreads {nthreads - 1}'
     simulator = subprocess.call(arg)
-
-    if simulator == 0:
-        print('Success!')
-    else:
-        print('Error!')
+    
+    if not simulator:
+        raise RuntimeError(f"simulator return exit code {simulator}")
 
 
-def main(options):
+def creation_configs(options):
+    """Creates configuration files based on the parent configuration file and writes to them all possible
+    combinations of parameter values from the job file. Returns a list with the names of the created files.
+
+    Keyword arguments:
+         options -- class 'optparse.Values', contains the value of the arguments corresponding to path or
+         file name / number of cores.
+
+    """
+
     list_configs = []
     with open(os.path.join(get_path_file('input_folder', options), get_path_file('task_file_name', options))) as f:
         templates = json.load(f)
@@ -73,6 +96,7 @@ def main(options):
                 save_configs = copy.deepcopy(new_configs)
 
             for numb_comb, config in enumerate(new_configs):
+                config['Configuration']['Name'] = f'{numb_dict}_{numb_comb + 1}'
                 with open(os.path.join(get_path_file('results_folder', options), f'conf_{numb_dict}_{numb_comb + 1}.json'), 'w')\
                         as f: json.dump(config, f, sort_keys=True, indent=2)
                 list_configs.append(f'conf_{numb_dict}_{numb_comb + 1}.json')
@@ -90,5 +114,5 @@ if __name__ == '__main__':
 
     (options, args) = parser.parse_args()
 
-    configs = main(options)
+    configs = creation_configs(options)
     run_simulator(configs, options)
